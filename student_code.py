@@ -142,15 +142,10 @@ class KnowledgeBase(object):
         if isinstance(fact_or_rule, Rule):
             fact_or_rule = self._get_rule(fact_or_rule)  
 
+
         if fact_or_rule.supported_by:
                 print("Cannot retract supported Fact or Rule")
                 return 
-        if isinstance(fact_or_rule, Fact):
-            fact_or_rule = self._get_fact(fact_or_rule)
-            #self.facts.remove(fact_or_rule)
-        if isinstance(fact_or_rule, Rule):
-            fact_or_rule = self._get_rule(fact_or_rule)
-            #self.rules.remove(fact_or_rule)
         for fact in fact_or_rule.supports_facts:
             for s_b in fact.supported_by:
                 if fact_or_rule in s_b:
