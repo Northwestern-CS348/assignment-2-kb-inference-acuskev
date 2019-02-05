@@ -116,7 +116,8 @@ class KnowledgeBase(object):
             print("Invalid ask:", fact.statement)
             return []
 
-    def kb_retract(self, fact):
+
+    def kb_retract(self, fact_or_rule):
         """Retract a fact from the KB
 
         Args:
@@ -125,12 +126,52 @@ class KnowledgeBase(object):
         Returns:
             None
         """
-        printv("Retracting {!r}", 0, verbose, [fact])
+        printv("Retracting {!r}", 0, verbose, [fact_or_rule])
         ####################################################
         # Student code goes here
+
+        
+        if not isinstance(fact_or_rule, Fact) and not isinstance(fact_or_rule, Rule):
+            print("Input must be fact or rule")
+            return
+        if isinstance(fact_or_rule, Rule) and fact_or_rule.asserted:
+            print("Cannot retract asserted Rule")
+            return
+        if isinstance(fact_or_rule, Fact):
+            fact_or_rule = self._get_fact(fact_or_rule)   
+        if isinstance(fact_or_rule, Rule):
+            fact_or_rule = self._get_rule(fact_or_rule)  
+
+        if fact_or_rule.supported_by:
+                print("Cannot retract supported Fact or Rule")
+                return 
+        if isinstance(fact_or_rule, Fact):
+            fact_or_rule = self._get_fact(fact_or_rule)
+            #self.facts.remove(fact_or_rule)
+        if isinstance(fact_or_rule, Rule):
+            fact_or_rule = self._get_rule(fact_or_rule)
+            #self.rules.remove(fact_or_rule)
+        for fact in fact_or_rule.supports_facts:
+            for s_b in fact.supported_by:
+                if fact_or_rule in s_b:
+                    self._get_fact(fact).supported_by.remove(s_b)
+            self.kb_retract(fact)
+        for rule in fact_or_rule.supports_rules:
+            for s_b in rule.supported_by:
+                if fact_or_rule in s_b:
+                    self._get_rule(rule).supported_by.remove(s_b)
+            self.kb_retract(rule)
+        if isinstance(fact_or_rule, Fact):
+            self.facts.remove(fact_or_rule)
+        else:
+            self.rules.remove(fact_or_rule)
+
+        return
+
         
 
 class InferenceEngine(object):
+
     def fc_infer(self, fact, rule, kb):
         """Forward-chaining to infer new facts and rules
 
@@ -146,3 +187,24 @@ class InferenceEngine(object):
             [fact.statement, rule.lhs, rule.rhs])
         ####################################################
         # Student code goes here
+        left_bindings = []
+        rule_statements = rule.lhs
+        rule_bindings = match(fact.statement, rule_statements[0])
+        if rule_bindings:
+            left_bindings = [instantiate(statement, rule_bindings) for statement in rule.lhs[1:]]
+            right_binding = instantiate(rule.rhs, rule_bindings)
+        else:
+            #print('no match')
+            return
+
+        if len(rule_statements) > 1:
+            new_rule = Rule([left_bindings, right_binding], [[fact, rule]])
+            fact.supports_rules.append(new_rule)
+            rule.supports_rules.append(new_rule)
+            kb.kb_assert(new_rule)
+        else:
+            new_fact = Fact(right_binding, [[fact, rule]])
+            fact.supports_facts.append(new_fact)
+            rule.supports_facts.append(new_fact)
+            kb.kb_assert(new_fact)
+        return
